@@ -1,0 +1,13 @@
+db:
+  host: 127.0.0.1
+  port: 5432
+  name: semaphore # required; the rest are optional
+  password: semaphore # defaults to not set
+  user: semaphore  # defaults to 'postgresql_user'
+semaphore:
+  download_url: https://github.com/semaphoreui/semaphore/releases/download/v2.10.22/semaphore_2.10.22_linux_amd64.tar.gz
+  install_dir: /usr/bin/
+  user: admin
+  password: admin
+  email: admin@email.com
+  config_file: files/config.json

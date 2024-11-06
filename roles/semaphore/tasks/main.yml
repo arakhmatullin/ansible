@@ -1,0 +1,84 @@
+    - name: "Create user"
+      ansible.builtin.user:
+        name: semaphore
+
+    - name: Create/etc/semaphore
+      file:
+        path: /etc/semaphore
+        recurse: yes
+        state: directory
+
+    - name: Copy config.json
+      ansible.builtin.copy:
+        src: "{{semaphore.config_file}}"
+        dest: "/etc/semaphore/config.json"
+        owner: "semaphore"
+        group: "semaphore"
+
+    - name: Copy service file
+      ansible.builtin.copy:
+        src: "files/semaphore.service"
+        dest: "/etc/systemd/system"
+
+    - name: Create db user
+      community.postgresql.postgresql_user:
+        name: "{{db.user}}"
+        password: "{{db.password}}"
+      become_user: postgres
+
+    - name: Create db
+      community.postgresql.postgresql_db:
+        name: "{{db.name}}"
+        owner: "{{db.user}}"
+      become_user: postgres
+
+    - name: Download tar arch
+      ansible.builtin.get_url:
+        url: "{{semaphore.download_url}}"
+        dest: /tmp/semaphore.tar.gz
+
+    - name: Unpack
+      ansible.builtin.unarchive:
+        remote_src: yes
+        include: semaphore
+        src: /tmp/semaphore.tar.gz
+        dest: "{{semaphore.install_dir}}"
+
+    - name: Delete user if exist
+      ignore_errors: true
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/semaphore
+          - user
+          - delete
+          - --login
+          - "{{semaphore.user}}"
+          - --config
+          - /etc/semaphore/config.json
+
+
+    - name: Add user to semaphore
+      ansible.builtin.command:
+        argv:
+        - /usr/bin/semaphore
+        - user
+        - add
+        - --admin
+        - --login
+        - "{{semaphore.user}}"
+        - --password
+        - "{{semaphore.password}}"
+        - --name
+        - "{{semaphore.user}}"
+        - --email
+        - "{{semaphore.email}}"
+        - --config
+        - /etc/semaphore/config.json
+
+    - name: Run service
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+        enabled: true
+        name: semaphore.service
+        state: started
+
